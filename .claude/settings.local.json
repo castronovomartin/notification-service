@@ -7,7 +7,8 @@
       "Read(//var/run/**)",
       "Read(//Users/tinchocastronovo/.docker/run/**)",
       "Read(//Users/tinchocastronovo/.colima/default/**)",
-      "Bash(grep -v \"^\\\\[INFO\\\\] Running.*\\\\$\")"
+      "Bash(grep -v \"^\\\\[INFO\\\\] Running.*\\\\$\")",
+      "Bash(mvn test *)"
     ]
   }
 }

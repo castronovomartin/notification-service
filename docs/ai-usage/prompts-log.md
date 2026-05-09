@@ -422,6 +422,60 @@ cada sesión de trabajo con Claude Code.
 
 ---
 
+### 🔷 AI-014 — Implementación del adaptador REST de entrada
+- **Herramienta:** Claude Code
+- **Fecha:** 09/05/2026
+- **Objetivo:** Implementar el adaptador REST completo en `adapter/in/rest/`:
+  controlador con los tres endpoints, DTOs de respuesta, mapper dominio→DTO,
+  manejador global de excepciones, `SecurityConfig` con OAuth2 JWT resource
+  server, rate limiting por `clientId` con Resilience4j, y suite de tests
+  MockMvc con `spring-security-test`
+- **Spec de referencia:** `04-api-contracts.md`, `06-security.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md and /docs/specs/04-api-contracts.md and
+  /docs/specs/06-security.md before doing anything.
+
+  Your task is to implement the REST input adapter following
+  the specs exactly.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Confirm that clientId is always extracted from JWT,
+     never from request parameters
+  3. Confirm that replay returns 202 Accepted, never 200
+  4. Wait for my approval
+```
+- **Archivos creados:**
+  - `adapter/in/rest/dto/NotificationEventResponse.java`
+  - `adapter/in/rest/dto/PagedNotificationEventResponse.java` *(con `PageMetadata` anidado)*
+  - `adapter/in/rest/dto/ReplayResponse.java`
+  - `adapter/in/rest/mapper/NotificationEventRestMapper.java`
+  - `adapter/in/rest/InvalidTokenException.java` *(excepción adaptador para JWT sin claim `clientId` → 401)*
+  - `adapter/in/rest/NotificationEventController.java`
+  - `adapter/in/rest/GlobalExceptionHandler.java` *(con `ErrorResponse` anidado)*
+  - `config/SecurityConfig.java`
+  - `adapter/in/rest/NotificationEventControllerIT.java` *(test)*
+- **Archivos modificados:**
+  - `pom.xml` *(añadidos `spring-boot-starter-oauth2-resource-server` y `resilience4j-spring-boot3:2.2.0`)*
+  - `src/main/resources/application.yaml` *(añadidos `jwk-set-uri`, configuración default de rate limiter y endpoints de Actuator)*
+- **Decisiones técnicas:**
+  - `clientId` extraído exclusivamente de `jwt.getClaimAsString("clientId")` en método privado `extractClientId`
+  - Replay retorna `ResponseEntity.accepted()` (202), nunca 200
+  - Rate limiting programático vía `rateLimiterRegistry.rateLimiter("replay-endpoint-" + clientId)` por cliente
+  - `GlobalExceptionHandler` mapea: `EventNotFoundException` → 404, `UnauthorizedAccessException` → 403,
+    `ReplayNotAllowedException` → 400, `RequestNotPermitted` → 429, `IllegalArgumentException` → 400 (incluye rango de fechas inválido),
+    `MethodArgumentTypeMismatchException` → 400 (enum status inválido), `InvalidTokenException` → 401
+  - `@MockBean JwtDecoder` en tests para satisfacer la dependencia de `SecurityConfig` sin issuer real
+  - `RateLimiter` mockeado vía `doAnswer` para invocar el supplier en el camino feliz y `doThrow` para 429
+- **Tests:** 82 passed, 0 failures, 0 errors — 14 tests nuevos en 3 clases anidadas
+  (`FindAll` × 5, `FindById` × 4, `Replay` × 5) con `@WebMvcTest` + `@Import(SecurityConfig.class)`
+  + JWT post-processors de `spring-security-test`. Acumulado con los 68 de sesiones anteriores.
+- **Captura:** `AI-014-rest-adapter.png`
+- **Commit hash:** `[pendiente — completar con hash de feat(api): implement REST input adapter with security and rate limiting]`
+
+---
+
 ## Template para próximas entradas (Claude Code)
 
 Copiar y completar para cada sesión de Claude Code:
@@ -462,3 +516,4 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-011 | Claude Code | Implementación capa de dominio | 16 archivos en `domain/model`, `domain/exception`, `domain/port` | 09/05/2026 |
 | AI-012 | Claude Code | Implementación NotificationEventService | `domain/service/NotificationEventService.java`, `NotificationEventServiceTest.java` | 09/05/2026 |
 | AI-013 | Claude Code | Implementación adaptador de persistencia | 9 archivos en `adapter/out/persistence`, `config`, `db/migration`, `data` | 09/05/2026 |
+| AI-014 | Claude Code | Implementación adaptador REST de entrada | 9 archivos en `adapter/in/rest`, `config`; modificados `pom.xml` y `application.yaml` | 09/05/2026 |
