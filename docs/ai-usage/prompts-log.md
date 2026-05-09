@@ -361,6 +361,67 @@ cada sesión de trabajo con Claude Code.
 
 ---
 
+### 🔷 AI-013 — Implementación del adaptador de persistencia
+- **Herramienta:** Claude Code
+- **Fecha:** 09/05/2026
+- **Objetivo:** Implementar el adaptador de persistencia completo en
+  `adapter/out/persistence/`, incluyendo entidad JPA, repositorio Spring Data,
+  Specifications para filtros, mapper dominio↔JPA, el adaptador que implementa
+  el puerto `NotificationEventRepository`, migración Flyway, datos semilla y
+  `DataInitializer` para carga al inicio
+- **Spec de referencia:** `02-domain-model.md`, `03-hexagonal-structure.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md and /docs/specs/02-domain-model.md and
+  /docs/specs/03-hexagonal-structure.md before doing anything.
+
+  Your task is to implement the persistence adapter following
+  the specs exactly.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Confirm that JPA annotations stay inside adapter/out/persistence/
+     and never leak into domain/model/
+  3. Wait for my approval
+
+  Files to implement:
+  - adapter/out/persistence/NotificationEventJpaEntity.java
+  - adapter/out/persistence/NotificationEventJpaRepository.java
+  - adapter/out/persistence/NotificationEventSpecification.java
+  - adapter/out/persistence/NotificationEventJpaMapper.java
+  - adapter/out/persistence/NotificationEventPersistenceAdapter.java
+  - src/main/resources/db/migration/V1__create_notification_events.sql
+  - src/main/resources/data/notification_events.json
+  - config/DataInitializer.java
+
+  After implementation write an integration test using
+  Testcontainers PostgreSQL covering:
+  - Save and retrieve an event by ID
+  - Filter by clientId, status, date range
+  - Pagination returns correct page size and total elements
+  - DataInitializer loads seed data correctly on empty DB
+```
+- **Archivos creados:**
+  - `adapter/out/persistence/NotificationEventJpaEntity.java`
+  - `adapter/out/persistence/NotificationEventJpaRepository.java`
+  - `adapter/out/persistence/NotificationEventSpecification.java`
+  - `adapter/out/persistence/NotificationEventJpaMapper.java`
+  - `adapter/out/persistence/NotificationEventPersistenceAdapter.java`
+  - `config/DataInitializer.java`
+  - `src/main/resources/db/migration/V1__create_notification_events.sql`
+  - `src/main/resources/data/notification_events.json` *(8 eventos semilla: CLIENT001 × 5, CLIENT002 × 3, todos los estados representados)*
+  - `adapter/out/persistence/NotificationEventPersistenceAdapterIT.java` *(test)*
+- **Archivos modificados:**
+  - `pom.xml` *(añadidos `spring-boot-testcontainers`, `testcontainers:postgresql`, `testcontainers:junit-jupiter`)*
+- **Tests:** 68 passed, 0 failures, 0 errors — 10 tests de integración nuevos
+  en 5 clases anidadas (`saveAndFindById`, `FilterByClientId`, `FilterByStatus`,
+  `FilterByDateRange`, `PaginationAndSort`, `DataInitializer`) con `@DataJpaTest`
+  + Testcontainers PostgreSQL 15. Acumulado con los 58 de sesiones anteriores.
+- **Captura:** `AI-013-persistence-adapter.png`
+- **Commit hash:** `[pendiente — completar con hash de feat(persistence): implement JPA persistence adapter with Testcontainers integration test]`
+
+---
+
 ## Template para próximas entradas (Claude Code)
 
 Copiar y completar para cada sesión de Claude Code:
@@ -400,3 +461,4 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-010 | Claude | prompts-log.md con interacciones de diseño | `docs/ai-usage/prompts-log.md` | 09/05/2026 |
 | AI-011 | Claude Code | Implementación capa de dominio | 16 archivos en `domain/model`, `domain/exception`, `domain/port` | 09/05/2026 |
 | AI-012 | Claude Code | Implementación NotificationEventService | `domain/service/NotificationEventService.java`, `NotificationEventServiceTest.java` | 09/05/2026 |
+| AI-013 | Claude Code | Implementación adaptador de persistencia | 9 archivos en `adapter/out/persistence`, `config`, `db/migration`, `data` | 09/05/2026 |

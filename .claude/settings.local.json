@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./mvnw test *)"
+      "Bash(./mvnw test *)",
+      "Bash(./mvnw verify *)",
+      "Bash(docker info *)",
+      "Read(//var/run/**)",
+      "Read(//Users/tinchocastronovo/.docker/run/**)",
+      "Read(//Users/tinchocastronovo/.colima/default/**)",
+      "Bash(grep -v \"^\\\\[INFO\\\\] Running.*\\\\$\")"
     ]
   }
 }

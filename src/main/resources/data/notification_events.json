@@ -1,0 +1,98 @@
+[
+  {
+    "eventId": "EVT001",
+    "eventType": "credit_card_payment",
+    "content": "Credit card payment received for $150.00",
+    "deliveryDate": "2024-03-15T09:30:22Z",
+    "status": "COMPLETED",
+    "clientId": "CLIENT001",
+    "retryCount": 0,
+    "lastAttemptAt": "2024-03-15T09:30:23Z",
+    "createdAt": "2024-03-15T09:30:22Z",
+    "updatedAt": "2024-03-15T09:30:23Z"
+  },
+  {
+    "eventId": "EVT002",
+    "eventType": "debit_card_withdrawal",
+    "content": "ATM withdrawal of $200.00",
+    "deliveryDate": "2024-03-15T10:15:45Z",
+    "status": "COMPLETED",
+    "clientId": "CLIENT001",
+    "retryCount": 0,
+    "lastAttemptAt": "2024-03-15T10:15:46Z",
+    "createdAt": "2024-03-15T10:15:45Z",
+    "updatedAt": "2024-03-15T10:15:46Z"
+  },
+  {
+    "eventId": "EVT003",
+    "eventType": "credit_transfer",
+    "content": "Bank transfer received from Account #4567 for $1,500.00",
+    "deliveryDate": "2024-03-15T11:20:18Z",
+    "status": "FAILED",
+    "clientId": "CLIENT002",
+    "retryCount": 5,
+    "lastAttemptAt": "2024-03-15T11:21:50Z",
+    "createdAt": "2024-03-15T11:20:18Z",
+    "updatedAt": "2024-03-15T11:21:50Z"
+  },
+  {
+    "eventId": "EVT004",
+    "eventType": "debit_transfer",
+    "content": "Outgoing transfer to Account #9012 for $750.00",
+    "deliveryDate": "2024-03-15T12:05:33Z",
+    "status": "FAILED",
+    "clientId": "CLIENT001",
+    "retryCount": 5,
+    "lastAttemptAt": "2024-03-15T12:07:55Z",
+    "createdAt": "2024-03-15T12:05:33Z",
+    "updatedAt": "2024-03-15T12:07:55Z"
+  },
+  {
+    "eventId": "EVT005",
+    "eventType": "credit_card_payment",
+    "content": "Credit card payment received for $85.50",
+    "deliveryDate": "2024-03-15T13:45:10Z",
+    "status": "RETRYING",
+    "clientId": "CLIENT001",
+    "retryCount": 2,
+    "lastAttemptAt": "2024-03-15T13:45:14Z",
+    "createdAt": "2024-03-15T13:45:10Z",
+    "updatedAt": "2024-03-15T13:45:14Z"
+  },
+  {
+    "eventId": "EVT006",
+    "eventType": "debit_card_withdrawal",
+    "content": "ATM withdrawal of $50.00",
+    "deliveryDate": "2024-03-15T14:30:00Z",
+    "status": "COMPLETED",
+    "clientId": "CLIENT002",
+    "retryCount": 0,
+    "lastAttemptAt": "2024-03-15T14:30:01Z",
+    "createdAt": "2024-03-15T14:30:00Z",
+    "updatedAt": "2024-03-15T14:30:01Z"
+  },
+  {
+    "eventId": "EVT007",
+    "eventType": "credit_transfer",
+    "content": "Transfer received from Account #1234 for $300.00",
+    "deliveryDate": "2024-03-15T15:20:45Z",
+    "status": "SKIPPED",
+    "clientId": "CLIENT002",
+    "retryCount": 0,
+    "lastAttemptAt": null,
+    "createdAt": "2024-03-15T15:20:45Z",
+    "updatedAt": "2024-03-15T15:20:45Z"
+  },
+  {
+    "eventId": "EVT008",
+    "eventType": "debit_transfer",
+    "content": "Outgoing transfer to Account #5678 for $1,200.00",
+    "deliveryDate": "2024-03-15T16:00:00Z",
+    "status": "PENDING",
+    "clientId": "CLIENT001",
+    "retryCount": 0,
+    "lastAttemptAt": null,
+    "createdAt": "2024-03-15T16:00:00Z",
+    "updatedAt": "2024-03-15T16:00:00Z"
+  }
+]
