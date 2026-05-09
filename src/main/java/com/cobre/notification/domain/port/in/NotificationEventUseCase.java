@@ -12,4 +12,6 @@ public interface NotificationEventUseCase {
     PagedResult<NotificationEvent> findAll(NotificationEventFilter filter, PageRequest pageRequest);
 
     void replay(String eventId, String clientId);
+
+    void processEvent(NotificationEvent event);
 }

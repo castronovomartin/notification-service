@@ -307,6 +307,60 @@ cada sesión de trabajo con Claude Code.
 
 ---
 
+### 🔷 AI-012 — Implementación de NotificationEventService
+- **Herramienta:** Claude Code
+- **Fecha:** 09/05/2026
+- **Objetivo:** Implementar `NotificationEventService` en `domain/service/`
+  con los cuatro casos de uso del sistema: `findById`, `findAll`, `replay`
+  y `processEvent`, incluyendo lógica de reintentos y publicación al DLQ
+- **Spec de referencia:** `01-system-design.md`, `02-domain-model.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md and /docs/specs/01-system-design.md and
+  /docs/specs/02-domain-model.md before doing anything.
+
+  Your task is to implement NotificationEventService in
+  domain/service/ following the specs exactly.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Confirm the service only depends on domain ports and
+     domain model, zero infrastructure imports
+  3. Wait for my approval
+
+  The service must implement NotificationEventUseCase and handle:
+  - findAll: apply filter, enforce clientId from parameter
+    (never trust external input), return PagedResult
+  - findById: load event, validate clientId ownership,
+    throw UnauthorizedAccessException if mismatch
+  - replay: validate status is FAILED, reset to PENDING via
+    resetForReplay(), publish to pending topic
+  - processEvent: check subscription via SubscriptionPort,
+    if no match mark as SKIPPED, if match attempt delivery
+    via WebhookDeliveryPort wrapped in retry logic,
+    update status based on DeliveryResult, persist result
+
+  After implementation write unit tests for every method covering:
+  - Happy path
+  - Event not found
+  - Unauthorized access (wrong clientId)
+  - Replay on non-FAILED event
+  - Subscription not found (SKIPPED)
+  - All retries exhausted (FAILED + DLQ publish)
+```
+- **Archivos modificados:**
+  - `domain/port/in/NotificationEventUseCase.java` *(añadido `processEvent(NotificationEvent event)`)*
+- **Archivos creados:**
+  - `domain/service/NotificationEventService.java`
+  - `domain/service/NotificationEventServiceTest.java` *(test)*
+- **Tests:** 58 passed, 0 failures, 0 errors — 18 tests nuevos en 4 clases
+  anidadas (`findById`, `findAll`, `replay`, `processEvent`) con Mockito strict
+  stubbing. Sin Spring context cargado. Acumulado con los 40 de AI-011.
+- **Captura:** `AI-012-notification-event-service.png`
+- **Commit hash:** `[pendiente — completar con hash de feat(domain): implement NotificationEventService]`
+
+---
+
 ## Template para próximas entradas (Claude Code)
 
 Copiar y completar para cada sesión de Claude Code:
@@ -345,3 +399,4 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-009 | Claude | Spec observability | `docs/specs/07-observability.md` | 09/05/2026 |
 | AI-010 | Claude | prompts-log.md con interacciones de diseño | `docs/ai-usage/prompts-log.md` | 09/05/2026 |
 | AI-011 | Claude Code | Implementación capa de dominio | 16 archivos en `domain/model`, `domain/exception`, `domain/port` | 09/05/2026 |
+| AI-012 | Claude Code | Implementación NotificationEventService | `domain/service/NotificationEventService.java`, `NotificationEventServiceTest.java` | 09/05/2026 |
