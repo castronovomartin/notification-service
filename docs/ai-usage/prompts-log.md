@@ -228,6 +228,85 @@ cada sesión de trabajo con Claude Code.
 
 ---
 
+### 🔷 AI-010 — Generación del prompts-log.md con todas las interacciones de diseño
+- **Herramienta:** Claude (claude.ai)
+- **Fecha:** 09/05/2026
+- **Objetivo:** Generar prompts-log.md con todas las interacciones de la
+  fase de diseño documentadas (AI-001 a AI-009), incluyendo template para
+  futuras sesiones de Claude Code y tabla resumen
+- **Prompt utilizado:** Ver captura `AI-010-prompt.png`
+- **Resultado:** Archivo `docs/ai-usage/prompts-log.md` creado con 9 entradas
+  documentadas (AI-001 a AI-009), template para sesiones de Claude Code y
+  tabla resumen de interacciones
+- **Captura:** `AI-010-prompts-log.png`
+- **Commit hash:** `f74521f` — ver `docs: add AI usage log with all design phase interactions`
+
+---
+
+### 🔷 AI-011 — Implementación completa de la capa de dominio
+- **Herramienta:** Claude Code
+- **Fecha:** 09/05/2026
+- **Objetivo:** Implementar la capa de dominio completa siguiendo la spec:
+  modelos, excepciones, puertos de entrada y salida, y tests de transición
+  de estado
+- **Spec de referencia:** `02-domain-model.md`, `03-hexagonal-structure.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md and /docs/specs/02-domain-model.md before doing anything.
+
+  Your task is to implement the complete domain layer following the spec exactly.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Confirm that zero Spring or JPA annotations will appear
+     in domain/model/ or domain/port/
+  3. Wait for my approval
+
+  Files to implement:
+  - domain/model/NotificationEvent.java
+  - domain/model/DeliveryStatus.java
+  - domain/model/Subscription.java
+  - domain/model/NotificationEventFilter.java
+  - domain/model/DeliveryResult.java
+  - domain/exception/EventNotFoundException.java
+  - domain/exception/UnauthorizedAccessException.java
+  - domain/exception/ReplayNotAllowedException.java
+  - domain/exception/InvalidStatusTransitionException.java
+  - domain/port/in/NotificationEventUseCase.java
+  - domain/port/out/NotificationEventRepository.java
+  - domain/port/out/WebhookDeliveryPort.java
+  - domain/port/out/SubscriptionPort.java
+  - domain/port/out/NotificationEventPublisher.java
+
+  After implementation write unit tests for every valid and invalid
+  status transition defined in the spec.
+```
+- **Archivos creados:**
+  - `domain/model/DeliveryStatus.java`
+  - `domain/model/NotificationEvent.java`
+  - `domain/model/Subscription.java`
+  - `domain/model/NotificationEventFilter.java`
+  - `domain/model/DeliveryResult.java`
+  - `domain/model/PageRequest.java` *(tipo puro Java añadido para paginación sin dependencia de Spring)*
+  - `domain/model/PagedResult.java` *(tipo puro Java añadido para paginación sin dependencia de Spring)*
+  - `domain/exception/EventNotFoundException.java`
+  - `domain/exception/UnauthorizedAccessException.java`
+  - `domain/exception/ReplayNotAllowedException.java`
+  - `domain/exception/InvalidStatusTransitionException.java`
+  - `domain/port/in/NotificationEventUseCase.java`
+  - `domain/port/out/NotificationEventRepository.java`
+  - `domain/port/out/WebhookDeliveryPort.java`
+  - `domain/port/out/SubscriptionPort.java`
+  - `domain/port/out/NotificationEventPublisher.java`
+  - `domain/model/DeliveryStatusTransitionTest.java` *(test)*
+- **Tests:** 40 passed, 0 failures, 0 errors — 5 clases anidadas cubriendo
+  todas las transiciones válidas e inválidas a nivel de enum y de métodos
+  de comportamiento del agregado. Sin Spring context cargado.
+- **Captura:** `AI-011-domain-layer.png`
+- **Commit hash:** `02c77a4` — ver `feat(domain): implement domain model, ports and status transition rules`
+
+---
+
 ## Template para próximas entradas (Claude Code)
 
 Copiar y completar para cada sesión de Claude Code:
@@ -264,3 +343,5 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-007 | Claude | Spec webhook delivery | `docs/specs/05-webhook-delivery.md` | 09/05/2026 |
 | AI-008 | Claude | Spec security | `docs/specs/06-security.md` | 09/05/2026 |
 | AI-009 | Claude | Spec observability | `docs/specs/07-observability.md` | 09/05/2026 |
+| AI-010 | Claude | prompts-log.md con interacciones de diseño | `docs/ai-usage/prompts-log.md` | 09/05/2026 |
+| AI-011 | Claude Code | Implementación capa de dominio | 16 archivos en `domain/model`, `domain/exception`, `domain/port` | 09/05/2026 |
