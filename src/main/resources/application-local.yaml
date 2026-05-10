@@ -1,0 +1,9 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Placeholder — never called in the local profile.
+          # JWT validation is bypassed by LocalSecurityConfig.
+          # clientId is read from the X-Client-Id request header instead.
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
