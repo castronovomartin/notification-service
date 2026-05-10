@@ -596,6 +596,62 @@ cada sesión de trabajo con Claude Code.
 - **Captura:** `AI-016-observability.png`
 - **Commit hash:** `[pendiente — completar con hash de feat(observability): add MDC filter, Micrometer metrics, structured JSON logging]`
 
+### 🔷 AI-017 — Infraestructura local, documentación y OpenAPI
+- **Herramienta:** Claude Code
+- **Fecha:** 10/05/2026
+- **Objetivo:** Añadir los archivos de infraestructura y documentación necesarios para ejecutar
+  el proyecto localmente y entregar un repositorio completo: `docker-compose.yml`,
+  `.env.example`, `README.md` y configuración de Swagger UI con esquema de seguridad JWT
+- **Spec de referencia:** `CLAUDE.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md before doing anything.
+
+  Your task is to add the infrastructure files and documentation
+  needed to run the project locally and deliver a complete repository.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Wait for my approval
+
+  Files to implement:
+  - docker-compose.yml
+    (services: PostgreSQL 15-alpine, Kafka, Zookeeper,
+     environment variables matching application.yaml defaults,
+     health checks for PostgreSQL and Kafka,
+     named volumes for data persistence)
+  - .env.example
+    (all environment variables the app needs with example values:
+     JWT_JWK_SET_URI, KAFKA_BOOTSTRAP_SERVERS, DB connection vars)
+  - README.md
+    (sections: Project Overview, Architecture, Tech Stack,
+     Prerequisites, How to Run Locally with docker-compose,
+     Running Tests, API Examples with curl using real data
+     from notification_events.json, Environment Variables,
+     link to Notion documentation)
+
+  Also add springdoc-openapi dependency to pom.xml and
+  OpenAPI config bean in config/ so Swagger UI is available
+  at /swagger-ui.html with JWT security scheme defined.
+```
+- **Archivos creados:**
+  - `docker-compose.yml` *(PostgreSQL 15-alpine + Zookeeper + Kafka `confluentinc/cp-*:7.6.0`; health checks con `pg_isready` y `kafka-broker-api-versions`; 4 named volumes)*
+  - `.env.example` *(6 variables: `JWT_JWK_SET_URI`, `KAFKA_BOOTSTRAP_SERVERS`, `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, `SPRING_PROFILES_ACTIVE`)*
+  - `README.md` *(Project Overview, diagrama de arquitectura con flujo de delivery, Tech Stack, Prerequisites, How to Run Locally, Running Tests, API Examples con curl sobre datos reales del seed, Environment Variables, Kafka Topics, Retry Strategy, Observability, link a Notion)*
+  - `config/OpenApiConfig.java` *(`@OpenAPIDefinition` + `@SecurityScheme(BearerAuth, HTTP bearer JWT)`; seguridad global aplicada a todos los endpoints)*
+- **Archivos modificados:**
+  - `pom.xml` *(añadido `springdoc-openapi-starter-webmvc-ui:2.8.8`)*
+- **Decisiones técnicas:**
+  - Kafka usa `confluentinc/cp-kafka:7.6.0` con Zookeeper (como especificó el usuario) en lugar de KRaft
+  - Variables de datasource (`SPRING_DATASOURCE_*`) no estaban en `application.yaml`; se definen en `.env.example` con valores que coinciden con el docker-compose
+  - curl examples en README usan datos reales del seed: EVT001 (GET, COMPLETED), EVT003/EVT004 (replay, FAILED), y casos de error (replay de EVT001 → 400, cross-client → 403)
+  - `@SecurityRequirement(name = "BearerAuth")` aplicado a nivel `@OpenAPIDefinition` para que el candado aparezca en todos los endpoints en Swagger UI sin anotar cada controller
+- **Tests:** 94 passed, 0 failures, 0 errors (sin regresiones)
+  - 64 unit tests (`mvn test`): dominio (40), servicio (19), `KafkaNotificationPublisherTest` (4), smoke test (1)
+  - 30 integration tests: `WebhookDeliveryAdapterIT` (6), `NotificationEventPersistenceAdapterIT` (10 + 5 DataInitializer), `NotificationEventControllerIT` (14)
+- **Captura:** `AI-017-infra-docs-openapi.png`
+- **Commit hash:** `[pendiente — completar con hash de chore(infra): add docker-compose, README, OpenAPI config]`
+
 ---
 
 ## Template para próximas entradas (Claude Code)
@@ -641,3 +697,4 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-014 | Claude Code | Implementación adaptador REST de entrada | 9 archivos en `adapter/in/rest`, `config`; modificados `pom.xml` y `application.yaml` | 09/05/2026 |
 | AI-015 | Claude Code | Adaptadores de salida webhook y Kafka | 10 archivos creados en `adapter/out`, `adapter/in/messaging`, `config`; 6 modificados | 10/05/2026 |
 | AI-016 | Claude Code | Capa de observabilidad completa | 4 archivos creados (`MdcContextFilter`, `ObservabilityConfig`, `KafkaHealthIndicator`, `logback-spring.xml`); 6 modificados | 10/05/2026 |
+| AI-017 | Claude Code | Infraestructura local, README y OpenAPI | `docker-compose.yml`, `.env.example`, `README.md`, `OpenApiConfig.java`; modificado `pom.xml` | 10/05/2026 |
