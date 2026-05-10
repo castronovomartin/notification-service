@@ -56,7 +56,26 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,prometheus
+        include: health,prometheus,info
+      base-path: /actuator
   endpoint:
     health:
       show-details: never
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: notification-service
+      environment: ${SPRING_PROFILES_ACTIVE:local}
+    distribution:
+      percentiles-histogram:
+        notifications.delivery.duration: true
+        notifications.webhook.response.time: true
+      percentiles:
+        notifications.delivery.duration: 0.5,0.95,0.99
+        notifications.webhook.response.time: 0.5,0.95,0.99
+  tracing:
+    sampling:
+      probability: 1.0

@@ -526,6 +526,76 @@ cada sesión de trabajo con Claude Code.
 - **Captura:** `AI-015-webhook-kafka-adapters.png`
 - **Commit hash:** `[pendiente — completar con hash de feat(webhook): implement webhook and Kafka adapters]`
 
+### 🔷 AI-016 — Implementación de la capa de observabilidad
+- **Herramienta:** Claude Code
+- **Fecha:** 10/05/2026
+- **Objetivo:** Implementar la capa de observabilidad completa: filtro MDC para peticiones REST,
+  configuración de métricas Micrometer con tags comunes, health indicator de Kafka, logging JSON
+  estructurado con `logstash-logback-encoder`, y contadores/timers en `NotificationEventService`
+  para todas las transiciones de estado
+- **Spec de referencia:** `07-observability.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md and /docs/specs/07-observability.md
+  before doing anything.
+
+  Your task is to implement the full observability layer
+  following the spec exactly.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Confirm MDC is cleared in a finally block in every
+     entry point (REST filter and Kafka consumer)
+  3. Confirm metrics are tagged with client_id and event_type
+  4. Wait for my approval
+
+  Files to implement:
+  - adapter/in/rest/MdcContextFilter.java
+  - config/ObservabilityConfig.java
+  - adapter/out/health/KafkaHealthIndicator.java
+  - src/main/resources/logback-spring.xml
+
+  Also add Micrometer metric calls inside
+  NotificationEventService for:
+  - notifications.delivered counter (client_id, event_type)
+  - notifications.failed counter (client_id, event_type, reason)
+  - notifications.retried counter (client_id, event_type)
+  - notifications.skipped counter (client_id, event_type)
+  - notifications.delivery.duration timer (client_id, event_type, outcome)
+
+  Add to pom.xml:
+  - logstash-logback-encoder dependency
+
+  Update application.yaml:
+  - management.metrics.distribution.percentiles for timers
+  - management.metrics.tags.application and environment
+```
+- **Archivos creados:**
+  - `adapter/in/rest/MdcContextFilter.java` *(servlet filter `@Order(HIGHEST_PRECEDENCE)`; correlationId de header o UUID; MDC.clear() en finally; propaga `X-Correlation-Id` en response)*
+  - `config/ObservabilityConfig.java` *(`MeterRegistryCustomizer` con tags comunes `application` y `environment`)*
+  - `adapter/out/health/KafkaHealthIndicator.java` *(`@Component("kafka")`, verifica `notifications.pending` vía `KafkaAdmin`)*
+  - `src/main/resources/logback-spring.xml` *(LogstashEncoder para perfil `!test`; plain-text para perfil `test`)*
+- **Archivos modificados:**
+  - `pom.xml` *(añadido `logstash-logback-encoder:8.0`)*
+  - `src/main/resources/application.yaml` *(añadidos `management.metrics.tags`, percentile histograms para timers, `management.tracing.sampling.probability: 1.0`)*
+  - `domain/service/NotificationEventService.java` *(inyectado `MeterRegistry`; 7 helpers privados: `recordDelivered`, `recordFailed`, `recordFailedNonRetryable`, `recordRetried`, `recordSkipped`, `recordReplayed`; logs INFO/ERROR en transiciones clave)*
+  - `adapter/in/rest/NotificationEventController.java` *(añadido `enrichMdc(clientId)` en los 3 métodos tras `extractClientId`; añadido import `MDC`)*
+  - `adapter/in/messaging/NotificationEventConsumer.java` *(firma actualizada a `ConsumerRecord<String, NotificationEvent>`; añadidos MDC keys `topic` y `partition`)*
+  - `test/.../NotificationEventServiceTest.java` *(añadido `@Spy SimpleMeterRegistry meterRegistry` para que `@InjectMocks` inyecte el nuevo parámetro del constructor)*
+- **Decisiones técnicas:**
+  - `MdcContextFilter` usa `@Order(HIGHEST_PRECEDENCE)` para ejecutarse antes que Spring Security; MDC.clear() en `finally` cubre rutas de error y excepciones
+  - `logback-spring.xml` con perfiles de Spring: JSON en producción, texto plano en tests (evita ruido en la salida de test)
+  - `logstash-logback-encoder:8.0` requerido para compatibilidad con Logback 1.5.x (Spring Boot 3.5.x)
+  - `@Spy SimpleMeterRegistry` en lugar de `@Mock MeterRegistry` para evitar stubbing de `counter()`/`timer()` — la implementación real de `SimpleMeterRegistry` registra métricas silenciosamente
+  - Métricas `reason=exhausted` vs `reason=non_retryable` en `notifications.failed` para distinguir agotamiento de reintentos de errores 4xx
+  - `notifications.replayed` tagged solo con `client_id` (no hay `event_type` disponible en `replay()` sin fetch adicional; la spec lo confirma)
+- **Tests:** 94 passed, 0 failures, 0 errors (sin regresiones)
+  - 64 unit tests (`mvn test`): dominio (40), servicio (19), `KafkaNotificationPublisherTest` (4), smoke test (1)
+  - 30 integration tests: `WebhookDeliveryAdapterIT` (6), `NotificationEventPersistenceAdapterIT` (10 + 5 DataInitializer), `NotificationEventControllerIT` (14)
+  - Log JSON estructurado verificado en output de tests (líneas `{"@timestamp":...}` visibles en stderr)
+- **Captura:** `AI-016-observability.png`
+- **Commit hash:** `[pendiente — completar con hash de feat(observability): add MDC filter, Micrometer metrics, structured JSON logging]`
+
 ---
 
 ## Template para próximas entradas (Claude Code)
@@ -570,3 +640,4 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-013 | Claude Code | Implementación adaptador de persistencia | 9 archivos en `adapter/out/persistence`, `config`, `db/migration`, `data` | 09/05/2026 |
 | AI-014 | Claude Code | Implementación adaptador REST de entrada | 9 archivos en `adapter/in/rest`, `config`; modificados `pom.xml` y `application.yaml` | 09/05/2026 |
 | AI-015 | Claude Code | Adaptadores de salida webhook y Kafka | 10 archivos creados en `adapter/out`, `adapter/in/messaging`, `config`; 6 modificados | 10/05/2026 |
+| AI-016 | Claude Code | Capa de observabilidad completa | 4 archivos creados (`MdcContextFilter`, `ObservabilityConfig`, `KafkaHealthIndicator`, `logback-spring.xml`); 6 modificados | 10/05/2026 |

@@ -12,6 +12,7 @@ import com.cobre.notification.domain.model.PagedResult;
 import com.cobre.notification.domain.port.in.NotificationEventUseCase;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -52,6 +53,7 @@ public class NotificationEventController {
             @AuthenticationPrincipal Jwt jwt) {
 
         String clientId = extractClientId(jwt);
+        enrichMdc(clientId);
         int clampedSize = Math.min(size, 100);
 
         NotificationEventFilter filter = new NotificationEventFilter(clientId, from, to, status);
@@ -76,6 +78,7 @@ public class NotificationEventController {
             @AuthenticationPrincipal Jwt jwt) {
 
         String clientId = extractClientId(jwt);
+        enrichMdc(clientId);
         NotificationEvent event = useCase.findById(eventId, clientId);
         return ResponseEntity.ok(mapper.toResponse(event));
     }
@@ -86,6 +89,7 @@ public class NotificationEventController {
             @AuthenticationPrincipal Jwt jwt) {
 
         String clientId = extractClientId(jwt);
+        enrichMdc(clientId);
         RateLimiter rateLimiter = rateLimiterRegistry.rateLimiter("replay-endpoint-" + clientId);
 
         return rateLimiter.executeSupplier(() -> {
@@ -102,5 +106,9 @@ public class NotificationEventController {
             throw new InvalidTokenException("JWT is missing required claim: clientId");
         }
         return clientId;
+    }
+
+    private void enrichMdc(String clientId) {
+        MDC.put("clientId", clientId);
     }
 }
