@@ -1,6 +1,6 @@
 package com.cobre.notification.adapter.in.messaging;
 
-import com.cobre.notification.domain.model.NotificationEvent;
+import com.cobre.notification.adapter.out.messaging.NotificationEventKafkaDto;
 import com.cobre.notification.domain.port.in.NotificationEventUseCase;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -25,16 +25,17 @@ public class NotificationEventConsumer {
     @KafkaListener(
             topics = {"notifications.pending", "notifications.retry"},
             groupId = "${spring.kafka.consumer.group-id:notification-dispatcher}")
-    public void consume(ConsumerRecord<String, NotificationEvent> record) {
+    public void consume(ConsumerRecord<String, NotificationEventKafkaDto> record) {
+        NotificationEventKafkaDto dto = record.value();
         try {
             MDC.put("correlationId", UUID.randomUUID().toString());
             MDC.put("clientId", record.key());
-            MDC.put("eventId", record.value().getEventId());
+            MDC.put("eventId", dto.getEventId());
             MDC.put("topic", record.topic());
             MDC.put("partition", String.valueOf(record.partition()));
 
             log.info("Processing notification event");
-            useCase.processEvent(record.value());
+            useCase.processEvent(dto.toDomain());
         } finally {
             MDC.clear();
         }

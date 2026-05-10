@@ -22,7 +22,7 @@ spring:
       auto-offset-reset: earliest
       enable-auto-commit: false
       properties:
-        spring.json.trusted.packages: "com.cobre.notification.domain.model"
+        spring.json.trusted.packages: "com.cobre.notification.domain.model,com.cobre.notification.adapter.out.messaging"
 
 webhook:
   client:
