@@ -331,4 +331,7 @@ Key metrics emitted:
 ## Documentation
 
 Full design documentation, architectural decisions, and AI usage log:
-[Notion — Notification Service](https://www.notion.so/notification-service)
+[Notion — Notification Service](https://amber-wok-959.notion.site/Sr-Software-Engineer-Challenge-35b1fc046a6b801c9927d09c5ec4956f)
+
+Source code:
+[GitHub — castronovomartin/notification-service](https://github.com/castronovomartin/notification-service)
