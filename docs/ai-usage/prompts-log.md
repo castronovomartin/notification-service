@@ -654,6 +654,59 @@ cada sesión de trabajo con Claude Code.
 
 ---
 
+### 🔷 AI-018 — Auditoría final completa + fixes de conformidad
+- **Herramienta:** Claude Code
+- **Fecha:** 10/05/2026
+- **Objetivo:** Realizar una auditoría de solo lectura de todo el repositorio contra las 7 specs,
+  identificar desviaciones y aplicar tres correcciones puntuales sin modificar ninguna otra cosa
+- **Spec de referencia:** `CLAUDE.md` + `docs/specs/01` al `07`
+- **Prompt utilizado (auditoría):**
+```
+  Read CLAUDE.md and all files in /docs/specs/ before doing anything.
+  Perform a complete final review of the entire repository.
+  Do not modify any file. This is a read-only audit.
+  Review every layer against its spec and report findings using this
+  exact format: ✅ PASS / ⚠️ WARNING / ❌ VIOLATION
+  Produce a summary table and a final verdict.
+```
+- **Prompt utilizado (fixes):**
+```
+  Apply these three targeted fixes only. Do not modify anything else.
+
+  FIX 1 — F-1: Add a comment in NotificationEvent.resetForReplay()
+  explaining the intentional retryCount=0 deviation from spec-02
+  ("never decrements") and spec-05 ("NOT reset for audit").
+  Justify why functional correctness takes priority here.
+  No logic changes.
+
+  FIX 2 — F-5: Remove the 'version: "3.9"' line from docker-compose.yml
+  to eliminate the Docker Compose V2 deprecation warning.
+
+  FIX 3 — F-6: Add the following matchers to SecurityConfig before
+  the anyRequest().authenticated() catch-all:
+  .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+  After all three fixes, run the full test suite.
+  Confirm 94 tests still pass before finishing.
+```
+- **Resultado de la auditoría:** 57 checks totales — 51 ✅ PASS · 5 ⚠️ WARNING · 1 ❌ VIOLATION
+  - Violation (F-1): `retryCount = 0` en `resetForReplay()` contradice spec-02 ("never decrements") y spec-05 ("NOT reset") → resuelto con comentario explicativo
+  - Warnings retenidos sin cambios: F-2 (dominio importa `MeterRegistry`, aceptado por spec-07), F-3 (Swagger accesible sin JWT), F-4 (retry vía Kafka en lugar de Resilience4j blocking), F-5 (`version: "3.9"` en docker-compose)
+- **Archivos modificados:**
+  - `domain/model/NotificationEvent.java` *(F-1: comentario de 6 líneas en `resetForReplay()` explicando la desviación intencional de spec-02/05 en favor de correctitud funcional; sin cambios de lógica)*
+  - `docker-compose.yml` *(F-5: eliminada línea `version: "3.9"` para cumplir con Docker Compose V2)*
+  - `config/SecurityConfig.java` *(F-6: añadido `.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()` antes de `.anyRequest().authenticated()` para acceso sin JWT a Swagger UI)*
+- **Decisiones técnicas:**
+  - F-1 mantiene `retryCount = 0` porque sin el reset, un replay sobre un evento con `retryCount=5` re-agotaría tras un solo fallo (`5 >= MAX_RETRY_ATTEMPTS`), haciendo inútil el replay; se documenta la contradicción spec-02 vs spec-05 en el código
+  - F-4 (retry Kafka vs Resilience4j) no se tocó: cambiar el modelo de retry implicaría reescribir el servicio y los tests de integración; se deja como decisión arquitectónica aceptada
+- **Tests:** 94 passed, 0 failures, 0 errors
+  - 64 unit tests (`mvn test`): dominio (40), servicio (19), `KafkaNotificationPublisherTest` (4), smoke test (1)
+  - 30 integration tests: `WebhookDeliveryAdapterIT` (6), `NotificationEventPersistenceAdapterIT` (10 + 5 DataInitializer), `NotificationEventControllerIT` (14)
+- **Captura:** `AI-018-audit-fixes.png`
+- **Commit hash:** `[pendiente]`
+
+---
+
 ## Template para próximas entradas (Claude Code)
 
 Copiar y completar para cada sesión de Claude Code:
@@ -697,4 +750,6 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-014 | Claude Code | Implementación adaptador REST de entrada | 9 archivos en `adapter/in/rest`, `config`; modificados `pom.xml` y `application.yaml` | 09/05/2026 |
 | AI-015 | Claude Code | Adaptadores de salida webhook y Kafka | 10 archivos creados en `adapter/out`, `adapter/in/messaging`, `config`; 6 modificados | 10/05/2026 |
 | AI-016 | Claude Code | Capa de observabilidad completa | 4 archivos creados (`MdcContextFilter`, `ObservabilityConfig`, `KafkaHealthIndicator`, `logback-spring.xml`); 6 modificados | 10/05/2026 |
+| AI-017 | Claude Code | Infraestructura y documentación | `docker-compose.yml`, `.env.example`, `README.md`, `config/OpenApiConfig.java`; modificado `pom.xml` | 10/05/2026 |
+| AI-018 | Claude Code | Auditoría final + fixes F-1/F-5/F-6 | Modificados `NotificationEvent.java`, `docker-compose.yml`, `SecurityConfig.java` | 10/05/2026 |
 | AI-017 | Claude Code | Infraestructura local, README y OpenAPI | `docker-compose.yml`, `.env.example`, `README.md`, `OpenApiConfig.java`; modificado `pom.xml` | 10/05/2026 |

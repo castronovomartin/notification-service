@@ -67,6 +67,12 @@ public class NotificationEvent {
 
     public void resetForReplay(Instant now) {
         requireTransition(DeliveryStatus.PENDING);
+        // Intentional deviation: spec-02 states "retryCount only increments, never decrements"
+        // and spec-05 states "retryCount is NOT reset (preserved for audit purposes)".
+        // However, spec-05 also states "The full delivery flow restarts from attempt 1."
+        // Without this reset, a replay on a fully exhausted event (retryCount=5) would
+        // re-exhaust after a single failure (5 >= MAX_RETRY_ATTEMPTS), making replay useless.
+        // This implementation resolves the spec contradiction in favor of functional correctness.
         retryCount = 0;
         updatedAt = now;
     }
