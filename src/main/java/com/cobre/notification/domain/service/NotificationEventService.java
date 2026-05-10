@@ -1,6 +1,7 @@
 package com.cobre.notification.domain.service;
 
 import com.cobre.notification.domain.exception.EventNotFoundException;
+import com.cobre.notification.domain.exception.NonRetryableDeliveryException;
 import com.cobre.notification.domain.exception.ReplayNotAllowedException;
 import com.cobre.notification.domain.exception.UnauthorizedAccessException;
 import com.cobre.notification.domain.model.DeliveryResult;
@@ -79,22 +80,30 @@ public class NotificationEventService implements NotificationEventUseCase {
         }
 
         String webhookUrl = subscription.get().getWebhookUrl();
-        DeliveryResult result = webhookDeliveryPort.deliver(event, webhookUrl);
-        Instant attemptedAt = result.attemptedAt();
+        try {
+            DeliveryResult result = webhookDeliveryPort.deliver(event, webhookUrl);
+            Instant attemptedAt = result.attemptedAt();
 
-        if (result.success()) {
-            event.markCompleted(attemptedAt);
-            repository.save(event);
-        } else {
-            event.markRetrying(attemptedAt);
-            if (event.getRetryCount() >= MAX_RETRY_ATTEMPTS) {
-                event.markFailed(attemptedAt);
+            if (result.success()) {
+                event.markCompleted(attemptedAt);
                 repository.save(event);
-                publisher.publishToDlq(event);
             } else {
-                repository.save(event);
-                publisher.publishForRetry(event);
+                event.markRetrying(attemptedAt);
+                if (event.getRetryCount() >= MAX_RETRY_ATTEMPTS) {
+                    event.markFailed(attemptedAt);
+                    repository.save(event);
+                    publisher.publishToDlq(event);
+                } else {
+                    repository.save(event);
+                    publisher.publishForRetry(event);
+                }
             }
+        } catch (NonRetryableDeliveryException e) {
+            Instant now = Instant.now();
+            event.markRetrying(now);
+            event.markFailed(now);
+            repository.save(event);
+            publisher.publishToDlq(event);
         }
     }
 }

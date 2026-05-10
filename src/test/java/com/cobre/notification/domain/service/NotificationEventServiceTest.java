@@ -1,6 +1,7 @@
 package com.cobre.notification.domain.service;
 
 import com.cobre.notification.domain.exception.EventNotFoundException;
+import com.cobre.notification.domain.exception.NonRetryableDeliveryException;
 import com.cobre.notification.domain.exception.ReplayNotAllowedException;
 import com.cobre.notification.domain.exception.UnauthorizedAccessException;
 import com.cobre.notification.domain.model.DeliveryResult;
@@ -348,6 +349,23 @@ class NotificationEventServiceTest {
             service.processEvent(event);
 
             assertThat(event.getStatus()).isEqualTo(DeliveryStatus.COMPLETED);
+        }
+
+        @Test
+        @DisplayName("marks FAILED and publishes to DLQ immediately on NonRetryableDeliveryException (4xx)")
+        void nonRetryableDelivery_marksFailedAndPublishesToDlq() {
+            NotificationEvent event = pendingEvent();
+            Subscription sub = wildcardSubscription();
+            when(subscriptionPort.findActiveByClientId(CLIENT_ID)).thenReturn(Optional.of(sub));
+            when(webhookDeliveryPort.deliver(event, sub.getWebhookUrl()))
+                    .thenThrow(new NonRetryableDeliveryException(EVENT_ID, 400));
+
+            service.processEvent(event);
+
+            assertThat(event.getStatus()).isEqualTo(DeliveryStatus.FAILED);
+            verify(repository).save(event);
+            verify(publisher).publishToDlq(event);
+            verify(publisher, never()).publishForRetry(any());
         }
 
         @Test

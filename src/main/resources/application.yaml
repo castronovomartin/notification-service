@@ -6,6 +6,29 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:9000/oauth2/jwks}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: notification-dispatcher
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: "com.cobre.notification.domain.model"
+
+webhook:
+  client:
+    connect-timeout-ms: 3000
+    response-timeout-ms: 5000
+    max-in-memory-size-mb: 1
 
 resilience4j:
   ratelimiter:
@@ -14,6 +37,20 @@ resilience4j:
         limit-for-period: 10
         limit-refresh-period: 1m
         timeout-duration: 0s
+  retry:
+    instances:
+      webhook-delivery:
+        max-attempts: 5
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        randomized-wait-factor: 0.5
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+        ignore-exceptions:
+          - com.cobre.notification.domain.exception.NonRetryableDeliveryException
 
 management:
   endpoints:

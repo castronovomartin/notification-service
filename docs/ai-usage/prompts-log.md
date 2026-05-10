@@ -474,6 +474,58 @@ cada sesión de trabajo con Claude Code.
 - **Captura:** `AI-014-rest-adapter.png`
 - **Commit hash:** `[pendiente — completar con hash de feat(api): implement REST input adapter with security and rate limiting]`
 
+### 🔷 AI-015 — Implementación de adaptadores de salida: webhook y Kafka
+- **Herramienta:** Claude Code
+- **Fecha:** 10/05/2026
+- **Objetivo:** Implementar `WebhookDeliveryAdapter` (un intento HTTP por llamada, sin retry interno),
+  `KafkaNotificationPublisher` (partition key siempre `clientId`), `NotificationEventConsumer`
+  (`@KafkaListener` en `notifications.pending` y `notifications.retry` con MDC), y sus tests.
+  Corregir `NotificationServiceApplicationTests` para cargar el contexto completo con Testcontainers.
+- **Spec de referencia:** `05-webhook-delivery.md`, `03-hexagonal-structure.md`
+- **Prompt utilizado:**
+```
+  Read CLAUDE.md and /docs/specs/05-webhook-delivery.md and
+  /docs/specs/03-hexagonal-structure.md before doing anything.
+  Your task is to implement the webhook delivery adapter and both
+  Kafka adapters following the specs exactly.
+
+  Before writing any code:
+  1. List every file you will create with its full path
+  2. Confirm WebhookDeliveryAdapter makes exactly one attempt per call
+     — retry orchestration belongs to the Kafka consumer
+  3. Confirm Kafka partition key is always clientId
+  4. Wait for my approval.
+```
+- **Archivos creados:**
+  - `adapter/out/webhook/WebhookPayload.java` *(record package-private)*
+  - `adapter/out/webhook/NonSuccessResultPredicate.java`
+  - `adapter/out/webhook/WebhookDeliveryAdapter.java`
+  - `adapter/out/messaging/KafkaNotificationPublisher.java`
+  - `adapter/in/messaging/NotificationEventConsumer.java`
+  - `adapter/out/persistence/InMemorySubscriptionAdapter.java` *(placeholder hasta implementar SubscriptionPort real)*
+  - `config/KafkaConfig.java`
+  - `config/WebClientConfig.java`
+  - `test/.../WebhookDeliveryAdapterIT.java` *(6 escenarios WireMock, sin Spring context)*
+  - `test/.../KafkaNotificationPublisherTest.java` *(4 tests unitarios)*
+- **Archivos modificados:**
+  - `pom.xml` *(añadido `wiremock-standalone:3.9.1` en scope test)*
+  - `src/main/resources/application.yaml` *(Kafka producer/consumer, webhook timeouts, retry Resilience4j)*
+  - `domain/service/NotificationEventService.java` *(catch `NonRetryableDeliveryException` → FAILED + DLQ)*
+  - `domain/exception/NonRetryableDeliveryException.java` *(creada en dominio)*
+  - `test/.../NotificationEventServiceTest.java` *(nuevo test `nonRetryableDelivery_marksFailedAndPublishesToDlq`)*
+  - `test/.../NotificationServiceApplicationTests.java` *(Testcontainers PostgreSQL + `@MockBean JwtDecoder`)*
+- **Decisiones técnicas:**
+  - `WebhookDeliveryAdapter` hace exactamente un intento HTTP; el retry es vía Kafka (el consumer reencola)
+  - HTTP 4xx → `NonRetryableDeliveryException` lanzada inmediatamente (sin reintento)
+  - Transición `PENDING → RETRYING → FAILED` en el catch de `NonRetryableDeliveryException` (la única ruta válida de estado)
+  - WireMock `standalone` para evitar conflictos de classpath con Jetty de Spring Boot
+  - `InMemorySubscriptionAdapter` placeholder devuelve `Optional.empty()` → eventos marcados SKIPPED hasta implementar la persistencia real de subscripciones
+- **Tests:** 94 passed, 0 failures, 0 errors
+  - 64 unit tests (`mvn test`): dominio (40), servicio (19), `KafkaNotificationPublisherTest` (4), smoke test (1)
+  - 30 integration tests: `WebhookDeliveryAdapterIT` (6), `NotificationEventPersistenceAdapterIT` (10 + 5 DataInitializer), `NotificationEventControllerIT` (14)
+- **Captura:** `AI-015-webhook-kafka-adapters.png`
+- **Commit hash:** `[pendiente — completar con hash de feat(webhook): implement webhook and Kafka adapters]`
+
 ---
 
 ## Template para próximas entradas (Claude Code)
@@ -517,3 +569,4 @@ Copiar y completar para cada sesión de Claude Code:
 | AI-012 | Claude Code | Implementación NotificationEventService | `domain/service/NotificationEventService.java`, `NotificationEventServiceTest.java` | 09/05/2026 |
 | AI-013 | Claude Code | Implementación adaptador de persistencia | 9 archivos en `adapter/out/persistence`, `config`, `db/migration`, `data` | 09/05/2026 |
 | AI-014 | Claude Code | Implementación adaptador REST de entrada | 9 archivos en `adapter/in/rest`, `config`; modificados `pom.xml` y `application.yaml` | 09/05/2026 |
+| AI-015 | Claude Code | Adaptadores de salida webhook y Kafka | 10 archivos creados en `adapter/out`, `adapter/in/messaging`, `config`; 6 modificados | 10/05/2026 |
