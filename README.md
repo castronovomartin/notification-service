@@ -81,57 +81,131 @@ notifications.pending  ──► NotificationEventConsumer
 
 ## How to Run Locally
 
-### 1. Start the infrastructure
+### 1. Prerequisites
+
+- **Java 21** — required to compile and run the service
+- **Maven 3.x** — or use the included `./mvnw` wrapper (no install needed)
+- **Docker Desktop** — must be running before starting infrastructure or integration tests
+
+### 2. Setup
+
+**Clone the repository:**
+
+```bash
+git clone https://github.com/castronovomartin/notification-service.git
+cd notification-service
+```
+
+**Create your local environment file:**
+
+```bash
+cp .env.example .env
+```
+
+The defaults in `.env.example` work out of the box with the provided `docker-compose.yml`.
+No edits are required for local development.
+
+**Export the environment variables:**
+
+```bash
+export $(grep -v '^#' .env | grep -v '^$' | grep '=' | xargs)
+```
+
+> This must be re-run in every new terminal session before starting the application.
+
+**Start the infrastructure:**
 
 ```bash
 docker-compose up -d
 ```
 
-This starts:
-- **PostgreSQL 15** on `localhost:5432` (database: `notification_db`)
-- **Zookeeper** on `localhost:2181`
-- **Kafka** on `localhost:9092`
+This starts PostgreSQL 15 on `localhost:5432`, Zookeeper on `localhost:2181`,
+and Kafka on `localhost:9092`.
 
-Wait for the health checks to pass (about 30 s):
+**Verify all containers are healthy:**
 
 ```bash
 docker-compose ps
 ```
 
-### 2. Configure environment variables
+Wait until both `postgres` and `kafka` show a `healthy` status (about 30 s).
+
+**Start the application:**
 
 ```bash
-cp .env.example .env
-# Edit .env and set JWT_JWK_SET_URI to your authorization server
-```
-
-### 3. Run the application
-
-```bash
-export $(cat .env | xargs)
 ./mvnw spring-boot:run
 ```
 
-The service starts on `http://localhost:8080`.
+The service is ready when you see:
 
-Flyway applies the schema migration automatically on startup.
-The `DataInitializer` seeds 8 sample events from
-`src/main/resources/data/notification_events.json`.
+```
+Started NotificationServiceApplication in X.XXX seconds
+```
 
-### 4. Explore the API
+> The `local` Spring profile activates automatically via `SPRING_PROFILES_ACTIVE=local` in `.env`.
+> Seed data (8 sample events) loads automatically on first run via `DataInitializer`.
 
-Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+### 3. Verify the application is running
 
-Prometheus metrics: [http://localhost:8080/actuator/prometheus](http://localhost:8080/actuator/prometheus)
-
-Health: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
-
-### 5. Stop the infrastructure
+**Check health:**
 
 ```bash
-docker-compose down          # keep volumes
-docker-compose down -v       # destroy volumes (reset all data)
+curl http://localhost:8080/actuator/health
 ```
+
+Expected: `{"status":"UP"}`
+
+**Open the API docs:**
+
+[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+### 4. Testing the API with Swagger UI
+
+- **No JWT required** in the `local` profile — JWT validation is bypassed.
+- **`clientId` defaults to `CLIENT001`** automatically when no identity header is present.
+- **To test as `CLIENT002`**: add the request header `X-Client-Id: CLIENT002` in Swagger UI
+  ("Authorize" button or directly on the request).
+
+### 5. End-to-end test sequence
+
+The seed data contains 8 events across two clients. The following sequence covers the main flows.
+All requests below use the default identity (`CLIENT001`).
+
+| Step | Request | Expected result |
+|---|---|---|
+| 1 | `GET /notification_events` | 200 — 5 events for CLIENT001 |
+| 2 | `GET /notification_events?status=FAILED` | 200 — 1 event: EVT004 |
+| 3 | `GET /notification_events/EVT001` | 200 — status COMPLETED |
+| 4 | `GET /notification_events/EVT003` | 403 — belongs to CLIENT002 |
+| 5 | `POST /notification_events/EVT004/replay` | 202 Accepted — EVT004 re-queued |
+| 6 | `POST /notification_events/EVT001/replay` | 400 Bad Request — EVT001 is not FAILED |
+
+### 6. Running the full test suite
+
+```bash
+./mvnw verify
+```
+
+This runs all **94 tests**: 64 unit tests (surefire, `test` phase) and 30 integration tests
+(failsafe, `integration-test` phase).
+
+> Docker must be running — integration tests spin up real PostgreSQL and Kafka containers
+> via Testcontainers.
+
+To run unit tests only (no Docker required):
+
+```bash
+./mvnw test
+```
+
+### 7. Resetting to a clean state
+
+```bash
+docker-compose down -v   # removes containers and all volumes (wipes DB and Kafka data)
+docker-compose up -d     # fresh infrastructure
+```
+
+Restart the application with `./mvnw spring-boot:run` — seed data reloads automatically.
 
 ---
 
